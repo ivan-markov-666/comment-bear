@@ -22,7 +22,29 @@ export type Lang =
   | "swift"
   | "kotlin"
   | "scala"
-  | "haskell";
+  | "haskell"
+  | "shell"
+  | "powershell"
+  | "perl"
+  | "r"
+  | "toml"
+  | "makefile"
+  | "dockerfile"
+  | "ini"
+  | "graphql"
+  | "elixir"
+  | "crystal"
+  | "julia"
+  | "nim"
+  | "coffeescript"
+  | "tcl"
+  | "cmake"
+  | "properties"
+  | "puppet"
+  | "hcl"
+  | "scss"
+  | "less"
+  | "sass";
 
 /**
  * Comment removal options

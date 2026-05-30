@@ -71,3 +71,63 @@ describe('Language Detection', () => {
     expect(() => detectLanguageByContent(binaryData as any)).toThrow(TypeError);
   });
 });
+
+describe('Phase 1 language detection', () => {
+  test('detects new extensions by filename', () => {
+    expect(detectLanguageByFilename('deploy.sh')).toBe('shell');
+    expect(detectLanguageByFilename('lib.bash')).toBe('shell');
+    expect(detectLanguageByFilename('start.fish')).toBe('shell');
+    expect(detectLanguageByFilename('module.ps1')).toBe('powershell');
+    expect(detectLanguageByFilename('script.pl')).toBe('perl');
+    expect(detectLanguageByFilename('analysis.r')).toBe('r');
+    expect(detectLanguageByFilename('analysis.R')).toBe('r');
+    expect(detectLanguageByFilename('Cargo.toml')).toBe('toml');
+    expect(detectLanguageByFilename('build.mk')).toBe('makefile');
+    expect(detectLanguageByFilename('config.ini')).toBe('ini');
+    expect(detectLanguageByFilename('settings.cfg')).toBe('ini');
+    expect(detectLanguageByFilename('schema.graphql')).toBe('graphql');
+    expect(detectLanguageByFilename('query.gql')).toBe('graphql');
+    expect(detectLanguageByFilename('mod.ex')).toBe('elixir');
+    expect(detectLanguageByFilename('test.exs')).toBe('elixir');
+    expect(detectLanguageByFilename('app.cr')).toBe('crystal');
+    expect(detectLanguageByFilename('calc.jl')).toBe('julia');
+    expect(detectLanguageByFilename('main.nim')).toBe('nim');
+    expect(detectLanguageByFilename('app.coffee')).toBe('coffeescript');
+    expect(detectLanguageByFilename('script.tcl')).toBe('tcl');
+    expect(detectLanguageByFilename('build.cmake')).toBe('cmake');
+    expect(detectLanguageByFilename('app.properties')).toBe('properties');
+    expect(detectLanguageByFilename('init.pp')).toBe('puppet');
+    expect(detectLanguageByFilename('main.tf')).toBe('hcl');
+    expect(detectLanguageByFilename('vars.tfvars')).toBe('hcl');
+    expect(detectLanguageByFilename('styles.scss')).toBe('scss');
+    expect(detectLanguageByFilename('styles.less')).toBe('less');
+    expect(detectLanguageByFilename('styles.sass')).toBe('sass');
+  });
+
+  test('detects special filenames without an extension', () => {
+    expect(detectLanguageByFilename('Makefile')).toBe('makefile');
+    expect(detectLanguageByFilename('makefile')).toBe('makefile');
+    expect(detectLanguageByFilename('GNUmakefile')).toBe('makefile');
+    expect(detectLanguageByFilename('Dockerfile')).toBe('dockerfile');
+    expect(detectLanguageByFilename('CMakeLists.txt')).toBe('cmake');
+  });
+
+  test('detects special filenames with a directory prefix', () => {
+    expect(detectLanguageByFilename('build/Dockerfile')).toBe('dockerfile');
+    expect(detectLanguageByFilename('src/Makefile')).toBe('makefile');
+  });
+
+  test('detects language by shebang', () => {
+    expect(detectLanguageByContent('#!/bin/bash\necho hi')).toBe('shell');
+    expect(detectLanguageByContent('#!/bin/sh\necho hi')).toBe('shell');
+    expect(detectLanguageByContent('#!/usr/bin/env zsh\necho hi')).toBe('shell');
+    expect(detectLanguageByContent('#!/usr/bin/env python3\nprint(1)')).toBe('python');
+    expect(detectLanguageByContent('#!/usr/bin/perl\nprint 1;')).toBe('perl');
+    expect(detectLanguageByContent('#!/usr/bin/env ruby\nputs 1')).toBe('ruby');
+    expect(detectLanguageByContent('#!/usr/bin/env node\nconsole.log(1)')).toBe('javascript');
+  });
+
+  test('detectLanguage falls back to shebang content detection', () => {
+    expect(detectLanguage(undefined, '#!/bin/bash\necho hi')).toBe('shell');
+  });
+});

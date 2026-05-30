@@ -43,9 +43,9 @@ const EXTENSION_MAP: Record<string, Lang> = {
   '.html': 'html',
   '.htm': 'html',
   '.css': 'css',
-  '.scss': 'css',
-  '.sass': 'css',
-  '.less': 'css',
+  '.scss': 'scss',
+  '.sass': 'sass',
+  '.less': 'less',
   
   // SQL
   '.sql': 'sql',
@@ -73,6 +73,85 @@ const EXTENSION_MAP: Record<string, Lang> = {
   // Haskell
   '.hs': 'haskell',
   '.lhs': 'haskell',
+
+  // Shell
+  '.sh': 'shell',
+  '.bash': 'shell',
+  '.zsh': 'shell',
+  '.ksh': 'shell',
+  '.fish': 'shell',
+
+  // PowerShell
+  '.ps1': 'powershell',
+  '.psm1': 'powershell',
+  '.psd1': 'powershell',
+
+  // Perl
+  '.pl': 'perl',
+  '.pm': 'perl',
+  '.t': 'perl',
+  '.pod': 'perl',
+
+  // R (matched case-insensitively, so .R is covered too)
+  '.r': 'r',
+
+  // TOML
+  '.toml': 'toml',
+
+  // Makefile
+  '.mk': 'makefile',
+
+  // INI
+  '.ini': 'ini',
+  '.cfg': 'ini',
+
+  // GraphQL
+  '.graphql': 'graphql',
+  '.gql': 'graphql',
+
+  // Elixir
+  '.ex': 'elixir',
+  '.exs': 'elixir',
+
+  // Crystal
+  '.cr': 'crystal',
+
+  // Julia
+  '.jl': 'julia',
+
+  // Nim
+  '.nim': 'nim',
+
+  // CoffeeScript
+  '.coffee': 'coffeescript',
+
+  // Tcl
+  '.tcl': 'tcl',
+
+  // CMake
+  '.cmake': 'cmake',
+
+  // Java properties
+  '.properties': 'properties',
+
+  // Puppet
+  '.pp': 'puppet',
+
+  // HCL / Terraform
+  '.tf': 'hcl',
+  '.hcl': 'hcl',
+  '.tfvars': 'hcl',
+};
+
+/**
+ * Mapping of special basenames (no useful extension) to languages.
+ * Keys are lowercased; lookups must lowercase the basename.
+ */
+const SPECIAL_FILENAMES: Record<string, Lang> = {
+  'makefile': 'makefile',
+  'gnumakefile': 'makefile',
+  'dockerfile': 'dockerfile',
+  'cmakelists.txt': 'cmake',
 };
 
 /**
@@ -90,7 +169,16 @@ export function detectLanguageByFilename(filename: string | undefined | null): L
   
   // Normalize the filename - trim spaces and remove trailing dots
   const normalized = filename.trim().replace(/\.+$/, '');
-  
+
+  // Special filenames without (or with a non-mapped) extension. These are
+  // matched on the basename (case-insensitive) and take precedence over the
+  // extension loop so e.g. `CMakeLists.txt` is detected as cmake.
+  const basename = normalized.replace(/^.*[\\/]/, '').toLowerCase();
+  const specialName = SPECIAL_FILENAMES[basename];
+  if (specialName) {
+    return specialName;
+  }
+
   // Check for exact extension match
   for (const [extension, lang] of Object.entries(EXTENSION_MAP)) {
     if (normalized.toLowerCase().endsWith(extension)) {
@@ -102,15 +190,53 @@ export function detectLanguageByFilename(filename: string | undefined | null): L
 }
 
 /**
+ * Maps a shebang line (e.g. `#!/usr/bin/env bash`) to a language.
+ *
+ * Looks at the interpreter named in the shebang. Recognises common shells,
+ * Python, Perl, Ruby and Node.
+ *
+ * @param shebangLine - The first line of the file, starting with `#!`
+ * @returns Detected language or undefined
+ */
+function detectLanguageByShebang(shebangLine: string): Lang | undefined {
+  const lower = shebangLine.toLowerCase();
+  if (/\b(bash|sh|zsh|ksh)\b/.test(lower)) {
+    return 'shell';
+  }
+  if (/\bpython[0-9.]*\b/.test(lower)) {
+    return 'python';
+  }
+  if (/\bperl\b/.test(lower)) {
+    return 'perl';
+  }
+  if (/\bruby\b/.test(lower)) {
+    return 'ruby';
+  }
+  if (/\bnode\b/.test(lower)) {
+    return 'javascript';
+  }
+  return undefined;
+}
+
+/**
  * Attempts to detect the language by code content
  * @param code - Code to analyze
  * @returns Detected language or undefined
  */
 export function detectLanguageByContent(code: string): Lang | undefined {
   if (!code || code.trim().length === 0) return undefined;
-  
+
   const trimmed = code.trim();
-  
+
+  // Shebang detection - map the interpreter on the first line to a language.
+  if (trimmed.startsWith('#!')) {
+    const firstLine = trimmed.split('\n')[0];
+    const shebangLang = detectLanguageByShebang(firstLine);
+    if (shebangLang) {
+      return shebangLang;
+    }
+  }
+
   // HTML - check for DOCTYPE or HTML tags
   if (trimmed.includes('<!DOCTYPE') || 
       /<html[\s>]/i.test(trimmed) ||

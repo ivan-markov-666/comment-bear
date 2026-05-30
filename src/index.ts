@@ -8,7 +8,7 @@ export { detectLanguage, detectLanguageByFilename, detectLanguageByContent } fro
 export { createCommentRemoverStream, CommentRemoverStream, CommentRemoverStreamOptions } from './stream';
 
 // Export config
-export { loadConfig, findConfigFile, CommentBearConfig } from './config';
+export { loadConfig, findConfigFile, mergeConfig, validateConfig, CommentBearConfig } from './config';
 
 // Import removers
 import { removeJavaScriptComments, removeTypeScriptComments } from './removers/javascript-remover';
@@ -28,6 +28,30 @@ import {
   removeScalaComments
 } from './removers/c-style-remover';
 import { removeJsonComments, removeYamlComments, removeRubyComments, removeHaskellComments } from './removers/other-remover';
+import {
+  removeShellComments,
+  removePowerShellComments,
+  removePerlComments,
+  removeRComments,
+  removeTomlComments,
+  removeMakefileComments,
+  removeDockerfileComments,
+  removeIniComments,
+  removeGraphqlComments,
+  removeElixirComments,
+  removeCrystalComments,
+  removeJuliaComments,
+  removeNimComments,
+  removeCoffeeScriptComments,
+  removeTclComments,
+  removeCMakeComments,
+  removePropertiesComments,
+  removePuppetComments,
+  removeHclComments,
+  removeScssComments,
+  removeLessComments,
+  removeSassComments
+} from './removers/hash-remover';
 
 import { Lang, RemoveOptions, RemoveResult } from './types';
 import { detectLanguage, detectLanguageByFilename } from './detectors/language-detector';
@@ -168,21 +192,89 @@ export function removeComments(code: any, options: RemoveOptions = {}): RemoveRe
     processedCode = removeYamlComments(code, preserveLicense, keepEmptyLines);
     break;
   
-  // HTML, CSS, SQL, JSON, XML remain UNCHANGED (2 parameters)
+  // HTML, CSS, SQL, JSON, XML now also honor keepEmptyLines.
   case 'html':
-    processedCode = removeHtmlComments(code, preserveLicense);
+    processedCode = removeHtmlComments(code, preserveLicense, keepEmptyLines);
     break;
   case 'css':
-    processedCode = removeCssComments(code, preserveLicense);
+    processedCode = removeCssComments(code, preserveLicense, keepEmptyLines);
     break;
   case 'sql':
-    processedCode = removeSqlComments(code, preserveLicense);
+    processedCode = removeSqlComments(code, preserveLicense, keepEmptyLines);
     break;
   case 'json':
-    processedCode = removeJsonComments(code, preserveLicense);
+    processedCode = removeJsonComments(code, preserveLicense, keepEmptyLines);
     break;
   case 'xml':
-    processedCode = removeXmlComments(code, preserveLicense);
+    processedCode = removeXmlComments(code, preserveLicense, keepEmptyLines);
+    break;
+
+  // Phase 1 languages.
+  case 'shell':
+    processedCode = removeShellComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'powershell':
+    processedCode = removePowerShellComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'perl':
+    processedCode = removePerlComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'r':
+    processedCode = removeRComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'toml':
+    processedCode = removeTomlComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'makefile':
+    processedCode = removeMakefileComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'dockerfile':
+    processedCode = removeDockerfileComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'ini':
+    processedCode = removeIniComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'graphql':
+    processedCode = removeGraphqlComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'elixir':
+    processedCode = removeElixirComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'crystal':
+    processedCode = removeCrystalComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'julia':
+    processedCode = removeJuliaComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'nim':
+    processedCode = removeNimComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'coffeescript':
+    processedCode = removeCoffeeScriptComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'tcl':
+    processedCode = removeTclComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'cmake':
+    processedCode = removeCMakeComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'properties':
+    processedCode = removePropertiesComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'puppet':
+    processedCode = removePuppetComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'hcl':
+    processedCode = removeHclComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'scss':
+    processedCode = removeScssComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'less':
+    processedCode = removeLessComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'sass':
+    processedCode = removeSassComments(code, preserveLicense, keepEmptyLines);
     break;
 }
   } catch (error) {
@@ -268,6 +360,40 @@ function countComments(code: string, language: Lang, preserveLicense: boolean = 
         break;
       case 'sql':
         if (trimmed.startsWith('--') || trimmed.startsWith('/*')) {
+          count++;
+        }
+        break;
+
+      // Hash-comment Phase 1 languages: count lines starting with #, ; or !.
+      case 'shell':
+      case 'powershell':
+      case 'perl':
+      case 'r':
+      case 'toml':
+      case 'makefile':
+      case 'dockerfile':
+      case 'ini':
+      case 'graphql':
+      case 'elixir':
+      case 'crystal':
+      case 'julia':
+      case 'nim':
+      case 'coffeescript':
+      case 'tcl':
+      case 'cmake':
+      case 'properties':
+        if (trimmed.startsWith('#') || trimmed.startsWith(';') || trimmed.startsWith('!')) {
+          count++;
+        }
+        break;
+
+      // Slash-comment Phase 1 languages: count lines starting with // or /*.
+      case 'scss':
+      case 'less':
+      case 'sass':
+      case 'hcl':
+      case 'puppet':
+        if (trimmed.startsWith('//') || trimmed.startsWith('/*')) {
           count++;
         }
         break;

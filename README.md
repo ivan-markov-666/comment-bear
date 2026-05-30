@@ -7,17 +7,18 @@
 
   [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat-square&logo=github)](https://github.com/ivan-markov-666/comment-bear)
   [![npm](https://img.shields.io/badge/npm-comment--bear-blue?style=flat-square&logo=npm)](https://www.npmjs.com/package/comment-bear)
-  [![Tests](https://img.shields.io/badge/tests-1043%2B-brightgreen?style=flat-square)](https://github.com/ivan-markov-666/comment-bear/actions)
+  [![Tests](https://img.shields.io/badge/tests-1196%2B-brightgreen?style=flat-square)](https://github.com/ivan-markov-666/comment-bear/actions)
   [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
 
-  🐻 A fast and friendly tool for removing comments from code in multiple programming languages. Built with TypeScript and thoroughly tested with 1043+ tests to ensure reliability and quality.
+  🐻 A fast and friendly tool for removing comments from code in 40+ programming languages. Built with TypeScript and thoroughly tested with 1196+ tests to ensure reliability and quality.
 </div>
 
 ## ✨ Features
 
-- 🌐 **Language Support**:
-  - **Full Support**: JavaScript, TypeScript, Python, Java, C#, C, C++, HTML, CSS, SQL, Ruby, Haskell
-  - **Basic Support** (using generic comment patterns): PHP, Go, Rust, Swift, Kotlin, Scala, YAML, JSON, XML
+- 🌐 **Language Support (40+ languages)**:
+  - **C-style** (`//`, `/* */`): JavaScript, TypeScript, Java, C#, C, C++, Go, Rust, Swift, Kotlin, Scala, PHP, SCSS, LESS, Sass, HCL/Terraform, Puppet
+  - **Hash-style** (`#`): Python, Ruby, Shell/Bash, PowerShell, Perl, R, TOML, YAML, Makefile, Dockerfile, INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript, Tcl, CMake, Java `.properties`
+  - **Markup & data**: HTML, XML, CSS, SQL, JSON, Haskell
   - *More languages coming soon!*
 
 - 🔍 **Automatic language detection** by file extension or content
@@ -30,10 +31,7 @@
 - 🌊 **Stream API** for processing large files
 - ⚙️ **Configuration files** (.commentbearrc) for project-level settings
 
-> **Note on Language Support**: 
-> - **Full Support**: Dedicated comment remover with language-specific rules
-> - **Basic Support**: Uses generic comment patterns that work for most cases but might not handle all edge cases
-> - We're actively working on adding more languages and improving existing support
+> **Note on Language Support**: Every language is processed by a remover that is aware of string/character literals, so comment tokens that appear inside strings are never touched. Most languages share a common, well-tested engine (`removeBySpec`) configured with that language's comment syntax. We're actively adding more languages and improving existing support.
 
 ## 📦 Installation
 
@@ -118,12 +116,18 @@ interface RemoveResult {
 
 ```typescript
 type Lang =
-  | "javascript" | "typescript" | "python" | "ruby"
-  | "java" | "csharp" | "c" | "cpp"
-  | "html" | "css" | "sql" | "yaml"
-  | "json" | "xml" | "php" | "go"
-  | "rust" | "swift" | "kotlin" | "scala"
-  | "haskell";
+  // C-style (// and /* */)
+  | "javascript" | "typescript" | "java" | "csharp"
+  | "c" | "cpp" | "go" | "rust" | "swift"
+  | "kotlin" | "scala" | "php"
+  | "scss" | "less" | "sass" | "hcl" | "puppet"
+  // Hash-style (#)
+  | "python" | "ruby" | "shell" | "powershell" | "perl"
+  | "r" | "toml" | "yaml" | "makefile" | "dockerfile"
+  | "ini" | "graphql" | "elixir" | "crystal" | "julia"
+  | "nim" | "coffeescript" | "tcl" | "cmake" | "properties"
+  // Markup & data
+  | "html" | "css" | "xml" | "sql" | "json" | "haskell";
 ```
 
 ## 🎯 Usage Examples
@@ -424,13 +428,17 @@ comment-bear/
 │   ├── detectors/            # Language detectors
 │   │   └── language-detector.ts
 │   └── removers/             # Language-specific removers
+│       ├── _shared.ts          # Shared helpers + generic removeBySpec engine
 │       ├── javascript-remover.ts
 │       ├── python-remover.ts
 │       ├── css-html-remover.ts
 │       ├── sql-remover.ts
 │       ├── c-style-remover.ts  # Java, C#, C, C++, PHP, Go, Rust, Swift, Kotlin, Scala
-│       └── other-remover.ts    # JSON, YAML, Ruby, Haskell
-├── test/                     # Tests (1043+ test cases)
+│       ├── other-remover.ts    # JSON, YAML, Ruby, Haskell
+│       └── hash-remover.ts     # Shell, PowerShell, Perl, R, TOML, Makefile, Dockerfile,
+│                               # INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript,
+│                               # Tcl, CMake, properties, Puppet, HCL, SCSS, LESS, Sass
+├── test/                     # Tests (1196+ test cases)
 ├── dist/                     # Compiled files (auto-generated)
 ├── package.json
 ├── tsconfig.json
@@ -465,6 +473,7 @@ MIT License - see the [LICENSE](LICENSE) file for details.
 
 - [x] CLI tool
 - [x] Support for more languages (Kotlin, Scala, Haskell)
+- [x] Shared comment engine + 22 more languages (Shell, PowerShell, Perl, TOML, Dockerfile, Julia, Nim, SCSS, …)
 - [x] Stream API for large file processing
 - [x] Configuration files (.commentbearrc)
 - [ ] Editor plugins (VS Code, IntelliJ)
