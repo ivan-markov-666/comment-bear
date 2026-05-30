@@ -7,6 +7,7 @@
 
   [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat-square&logo=github)](https://github.com/ivan-markov-666/comment-bear)
   [![npm](https://img.shields.io/badge/npm-comment--bear-blue?style=flat-square&logo=npm)](https://www.npmjs.com/package/comment-bear)
+  [![CI](https://github.com/ivan-markov-666/comment-bear/actions/workflows/ci.yml/badge.svg)](https://github.com/ivan-markov-666/comment-bear/actions/workflows/ci.yml)
   [![Tests](https://img.shields.io/badge/tests-1196%2B-brightgreen?style=flat-square)](https://github.com/ivan-markov-666/comment-bear/actions)
   [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
 
