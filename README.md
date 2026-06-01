@@ -8,18 +8,23 @@
   [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat-square&logo=github)](https://github.com/ivan-markov-666/comment-bear)
   [![npm](https://img.shields.io/badge/npm-comment--bear-blue?style=flat-square&logo=npm)](https://www.npmjs.com/package/comment-bear)
   [![CI](https://github.com/ivan-markov-666/comment-bear/actions/workflows/ci.yml/badge.svg)](https://github.com/ivan-markov-666/comment-bear/actions/workflows/ci.yml)
-  [![Tests](https://img.shields.io/badge/tests-1263%2B-brightgreen?style=flat-square)](https://github.com/ivan-markov-666/comment-bear/actions)
+  [![Tests](https://img.shields.io/badge/tests-1369%2B-brightgreen?style=flat-square)](https://github.com/ivan-markov-666/comment-bear/actions)
   [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
 
-  🐻 A fast and friendly tool for removing comments from code in 50+ programming languages. Built with TypeScript and thoroughly tested with 1263+ tests to ensure reliability and quality.
+  🐻 A fast and friendly tool for removing comments from code in 75+ programming languages. Built with TypeScript and thoroughly tested with 1369+ tests to ensure reliability and quality.
 </div>
 
 ## ✨ Features
 
-- 🌐 **Language Support (50+ languages)**:
-  - **C-style** (`//`, `/* */`): JavaScript, TypeScript, Java, C#, C, C++, Go, Rust, Swift, Kotlin, Scala, PHP, Dart, Groovy/Gradle, Solidity, Protobuf, Objective-C, Zig, Vala, D, GLSL, HLSL, WGSL, JSON5, SCSS, LESS, Sass, HCL/Terraform, Puppet
+- 🌐 **Language Support (75+ languages)**:
+  - **C-style** (`//`, `/* */`): JavaScript, TypeScript, Java, C#, C, C++, Go, Rust, Swift, Kotlin, Scala, PHP, Dart, Groovy/Gradle, Solidity, Protobuf, Objective-C, Zig, Vala, D, GLSL, HLSL, WGSL, JSON5, SCSS, LESS, Sass, HCL/Terraform, Puppet, F#, Pascal
   - **Hash-style** (`#`): Python, Ruby, Shell/Bash, PowerShell, Perl, R, TOML, YAML, Makefile, Dockerfile, INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript, Tcl, CMake, Java `.properties`
-  - **Markup & data**: HTML, XML, CSS, SQL, JSON, Haskell
+  - **Dash-style** (`--`): SQL, Haskell, Lua, Elm, Ada, VHDL, AppleScript
+  - **Lisp/asm** (`;`): Clojure, Common Lisp, Scheme, Racket, Emacs Lisp, Assembly
+  - **Percent** (`%`): Erlang, LaTeX, MATLAB, Prolog
+  - **ML-style** (`(* *)`): OCaml, F#, Standard ML, Pascal
+  - **Other**: VB/VBA (`'`, `REM`), Batch (`REM`, `::`), Fortran (`!`), Vim (`"`)
+  - **Markup & data**: HTML, XML, CSS, JSON
   - *More languages coming soon!*
 
 - 🔍 **Automatic language detection** by file extension or content
@@ -33,6 +38,12 @@
 - ⚙️ **Configuration files** (.commentbearrc) for project-level settings
 
 > **Note on Language Support**: Every language is processed by a remover that is aware of string/character literals, so comment tokens that appear inside strings are never touched. Most languages share a common, well-tested engine (`removeBySpec`) configured with that language's comment syntax. We're actively adding more languages and improving existing support.
+
+> **Known limitations**:
+> - **MATLAB/Octave**: only `"`-strings are tracked, not `'`-strings, because `'` is also the transpose operator. A `%` inside a single-quoted char array may be over-removed. Pass `--language matlab` explicitly (`.m` maps to Objective-C).
+> - **Fortran**: only free-form `!` comments are removed (not fixed-form column-1 `C`/`*`).
+> - **Vimscript**: only full-line `"` comments are removed; inline `"` is left intact to avoid corrupting strings.
+> - **Prolog**: reachable only via explicit `--language prolog` (`.pl` maps to Perl).
 
 ## 📦 Installation
 
@@ -129,6 +140,12 @@ type Lang =
   | "r" | "toml" | "yaml" | "makefile" | "dockerfile"
   | "ini" | "graphql" | "elixir" | "crystal" | "julia"
   | "nim" | "coffeescript" | "tcl" | "cmake" | "properties"
+  // Dash (--), Lisp (;), percent (%), ML (* *), and other families
+  | "lua" | "elm" | "ada" | "vhdl" | "applescript"
+  | "clojure" | "commonlisp" | "scheme" | "emacslisp" | "assembly"
+  | "erlang" | "latex" | "matlab" | "prolog"
+  | "ocaml" | "fsharp" | "sml" | "pascal"
+  | "vb" | "batch" | "fortran" | "vimscript"
   // Markup & data
   | "html" | "css" | "xml" | "sql" | "json" | "haskell";
 ```
@@ -441,9 +458,12 @@ comment-bear/
 │       ├── hash-remover.ts     # Shell, PowerShell, Perl, R, TOML, Makefile, Dockerfile,
 │       │                       # INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript,
 │       │                       # Tcl, CMake, properties, Puppet, HCL, SCSS, LESS, Sass
-│       └── cstyle-extra-remover.ts # Dart, Groovy, Solidity, Protobuf, Objective-C, Zig,
-│                                   # Vala, D, GLSL, HLSL, WGSL, JSON5
-├── test/                     # Tests (1263+ test cases)
+│       ├── cstyle-extra-remover.ts # Dart, Groovy, Solidity, Protobuf, Objective-C, Zig,
+│       │                           # Vala, D, GLSL, HLSL, WGSL, JSON5
+│       └── phase3-remover.ts   # Lua, Elm, Ada, VHDL, AppleScript, Clojure, Common Lisp,
+│                               # Scheme, Emacs Lisp, Assembly, Erlang, LaTeX, MATLAB,
+│                               # Prolog, OCaml, F#, SML, Pascal, VB, Batch, Fortran, Vim
+├── test/                     # Tests (1369+ test cases)
 ├── dist/                     # Compiled files (auto-generated)
 ├── package.json
 ├── tsconfig.json

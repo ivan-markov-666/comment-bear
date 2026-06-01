@@ -66,6 +66,30 @@ import {
   removeWgslComments,
   removeJson5Comments
 } from './removers/cstyle-extra-remover';
+import {
+  removeLuaComments,
+  removeElmComments,
+  removeAdaComments,
+  removeVhdlComments,
+  removeAppleScriptComments,
+  removeClojureComments,
+  removeCommonLispComments,
+  removeSchemeComments,
+  removeEmacsLispComments,
+  removeAssemblyComments,
+  removeErlangComments,
+  removeLatexComments,
+  removeMatlabComments,
+  removePrologComments,
+  removeOcamlComments,
+  removeFSharpComments,
+  removeSmlComments,
+  removePascalComments,
+  removeVbComments,
+  removeBatchComments,
+  removeFortranComments,
+  removeVimComments
+} from './removers/phase3-remover';
 
 import { Lang, RemoveOptions, RemoveResult } from './types';
 import { detectLanguage, detectLanguageByFilename } from './detectors/language-detector';
@@ -328,6 +352,74 @@ export function removeComments(code: any, options: RemoveOptions = {}): RemoveRe
   case 'json5':
     processedCode = removeJson5Comments(code, preserveLicense, keepEmptyLines);
     break;
+
+  // Phase 3 languages.
+  case 'lua':
+    processedCode = removeLuaComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'elm':
+    processedCode = removeElmComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'ada':
+    processedCode = removeAdaComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'vhdl':
+    processedCode = removeVhdlComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'applescript':
+    processedCode = removeAppleScriptComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'clojure':
+    processedCode = removeClojureComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'commonlisp':
+    processedCode = removeCommonLispComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'scheme':
+    processedCode = removeSchemeComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'emacslisp':
+    processedCode = removeEmacsLispComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'assembly':
+    processedCode = removeAssemblyComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'erlang':
+    processedCode = removeErlangComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'latex':
+    processedCode = removeLatexComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'matlab':
+    processedCode = removeMatlabComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'prolog':
+    processedCode = removePrologComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'ocaml':
+    processedCode = removeOcamlComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'fsharp':
+    processedCode = removeFSharpComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'sml':
+    processedCode = removeSmlComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'pascal':
+    processedCode = removePascalComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'vb':
+    processedCode = removeVbComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'batch':
+    processedCode = removeBatchComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'fortran':
+    processedCode = removeFortranComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'vimscript':
+    processedCode = removeVimComments(code, preserveLicense, keepEmptyLines);
+    break;
 }
   } catch (error) {
     console.error(`Error removing comments for language ${language}:`, error);
@@ -458,6 +550,70 @@ function countComments(code: string, language: Lang, preserveLicense: boolean = 
       case 'hcl':
       case 'puppet':
         if (trimmed.startsWith('//') || trimmed.startsWith('/*')) {
+          count++;
+        }
+        break;
+
+      // Phase 3 `--`-comment languages.
+      case 'lua':
+      case 'elm':
+      case 'ada':
+      case 'vhdl':
+      case 'applescript':
+        if (trimmed.startsWith('--')) {
+          count++;
+        }
+        break;
+
+      // Phase 3 `;`-comment languages (Lisp / asm).
+      case 'clojure':
+      case 'commonlisp':
+      case 'scheme':
+      case 'emacslisp':
+      case 'assembly':
+        if (trimmed.startsWith(';')) {
+          count++;
+        }
+        break;
+
+      // Phase 3 `%`-comment languages.
+      case 'erlang':
+      case 'latex':
+      case 'matlab':
+      case 'prolog':
+        if (trimmed.startsWith('%')) {
+          count++;
+        }
+        break;
+
+      // Phase 3 `(* *)`-block / `//` / `{` comment languages.
+      case 'ocaml':
+      case 'fsharp':
+      case 'sml':
+      case 'pascal':
+        if (trimmed.startsWith('(*') || trimmed.startsWith('//') || trimmed.startsWith('{')) {
+          count++;
+        }
+        break;
+
+      // Phase 3 miscellaneous languages.
+      case 'vb':
+        if (trimmed.startsWith("'") || /^REM\b/i.test(trimmed)) {
+          count++;
+        }
+        break;
+      case 'batch':
+        if (/^REM\b/i.test(trimmed) || trimmed.startsWith('::')) {
+          count++;
+        }
+        break;
+      case 'fortran':
+        if (trimmed.startsWith('!')) {
+          count++;
+        }
+        break;
+      case 'vimscript':
+        if (trimmed.startsWith('"')) {
           count++;
         }
         break;

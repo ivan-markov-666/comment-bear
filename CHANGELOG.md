@@ -8,6 +8,8 @@ All notable changes to the Comment Bear project will be documented in this file.
 - Shared comment-removal engine (`removeBySpec` in `src/removers/_shared.ts`) that is aware of string/character literals, nested block comments, license/directive preservation and `keepEmptyLines`.
 - 22 hash-family languages: Shell/Bash, PowerShell, Perl (incl. POD blocks), R, TOML, Makefile, Dockerfile, INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript, Tcl, CMake, Java `.properties`, Puppet, HCL/Terraform, SCSS, LESS, Sass.
 - 12 C-style languages: Dart, Groovy/Gradle, Solidity, Protobuf, Objective-C (incl. `@"..."` literals), Zig, Vala, D (`/+ +/` nested blocks), GLSL, HLSL, WGSL, JSON5.
+- 22 more languages across the remaining comment families: Lua (long-bracket strings/comments), Elm, Ada, VHDL, AppleScript, Clojure, Common Lisp, Scheme, Emacs Lisp, Assembly, Erlang, LaTeX (`\%` aware), MATLAB (`%{ %}`), Prolog, OCaml, F#, Standard ML, Pascal, VB/VBA (`'`, `REM`), Batch (`REM`, `::`), Fortran (`!`), Vimscript (line-start `"`).
+- Optional `onlyAtLineStart` flag on the shared engine's line-comment spec (used by Vimscript; purely additive).
 - Language detection by shebang (`#!/usr/bin/env bash` → shell, etc.) and by special filename (`Makefile`, `Dockerfile`, `CMakeLists.txt`).
 - `keepEmptyLines` support for HTML, CSS, XML, SQL and JSON removers.
 - `mergeConfig` and `validateConfig` are now re-exported from the package entry point.

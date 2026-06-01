@@ -183,6 +183,96 @@ const EXTENSION_MAP: Record<string, Lang> = {
   // JSON5 / JSONC
   '.json5': 'json5',
   '.jsonc': 'json5',
+
+  // Phase 3 languages.
+
+  // Lua
+  '.lua': 'lua',
+
+  // Elm
+  '.elm': 'elm',
+
+  // Ada
+  '.adb': 'ada',
+  '.ads': 'ada',
+
+  // VHDL
+  '.vhd': 'vhdl',
+  '.vhdl': 'vhdl',
+
+  // AppleScript
+  '.applescript': 'applescript',
+
+  // Clojure
+  '.clj': 'clojure',
+  '.cljs': 'clojure',
+  '.cljc': 'clojure',
+  '.edn': 'clojure',
+
+  // Common Lisp
+  '.lisp': 'commonlisp',
+  '.cl': 'commonlisp',
+
+  // Scheme (also Racket)
+  '.scm': 'scheme',
+  '.ss': 'scheme',
+  '.rkt': 'scheme',
+
+  // Emacs Lisp
+  '.el': 'emacslisp',
+
+  // Assembly
+  '.asm': 'assembly',
+  '.s': 'assembly',
+
+  // Erlang
+  '.erl': 'erlang',
+  '.hrl': 'erlang',
+
+  // LaTeX
+  '.tex': 'latex',
+  '.sty': 'latex',
+
+  // OCaml
+  '.ml': 'ocaml',
+  '.mli': 'ocaml',
+
+  // F#
+  '.fs': 'fsharp',
+  '.fsx': 'fsharp',
+  '.fsi': 'fsharp',
+
+  // Standard ML
+  '.sml': 'sml',
+
+  // Pascal / Delphi
+  '.pas': 'pascal',
+  '.dpr': 'pascal',
+  '.lpr': 'pascal',
+
+  // Visual Basic
+  '.vb': 'vb',
+  '.vba': 'vb',
+  '.bas': 'vb',
+
+  // Batch
+  '.bat': 'batch',
+  '.cmd': 'batch',
+
+  // Fortran (free-form)
+  '.f90': 'fortran',
+  '.f95': 'fortran',
+  '.f03': 'fortran',
+  '.f08': 'fortran',
+  '.f': 'fortran',
+  '.for': 'fortran',
+
+  // Vimscript
+  '.vim': 'vimscript',
+
+  // NOTE: matlab and prolog get NO extension mapping on purpose. `.m` is
+  // already mapped to Objective-C and `.pl` to Perl, so MATLAB and Prolog are
+  // reachable only via an explicit `--language matlab` / `--language prolog`.
 };
 
 /**
@@ -194,6 +284,10 @@ const SPECIAL_FILENAMES: Record<string, Lang> = {
   'gnumakefile': 'makefile',
   'dockerfile': 'dockerfile',
   'cmakelists.txt': 'cmake',
+  '.vimrc': 'vimscript',
+  'vimrc': 'vimscript',
+  '_vimrc': 'vimscript',
+  '.gvimrc': 'vimscript',
 };
 
 /**

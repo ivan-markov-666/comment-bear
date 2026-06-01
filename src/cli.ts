@@ -27,7 +27,10 @@ const VALID_LANGUAGES: Lang[] = [
   'ini', 'graphql', 'elixir', 'crystal', 'julia', 'nim', 'coffeescript',
   'tcl', 'cmake', 'properties', 'puppet', 'hcl', 'scss', 'less', 'sass',
   'dart', 'groovy', 'solidity', 'protobuf', 'objectivec', 'zig', 'vala',
-  'd', 'glsl', 'hlsl', 'wgsl', 'json5'
+  'd', 'glsl', 'hlsl', 'wgsl', 'json5',
+  'lua', 'elm', 'ada', 'vhdl', 'applescript', 'clojure', 'commonlisp',
+  'scheme', 'emacslisp', 'assembly', 'erlang', 'latex', 'matlab', 'prolog',
+  'ocaml', 'fsharp', 'sml', 'pascal', 'vb', 'batch', 'fortran', 'vimscript'
 ];
 
 export function parseArgs(args: string[]): CliOptions {
@@ -133,7 +136,10 @@ Supported languages:
   makefile, dockerfile, ini, graphql, elixir, crystal, julia,
   nim, coffeescript, tcl, cmake, properties, puppet, hcl,
   scss, less, sass, dart, groovy, solidity, protobuf, objectivec,
-  zig, vala, d, glsl, hlsl, wgsl, json5
+  zig, vala, d, glsl, hlsl, wgsl, json5, lua, elm, ada, vhdl,
+  applescript, clojure, commonlisp, scheme, emacslisp, assembly,
+  erlang, latex, matlab, prolog, ocaml, fsharp, sml, pascal, vb,
+  batch, fortran, vimscript
 
 Examples:
   comment-bear src/index.js                    # Print to stdout

@@ -68,6 +68,14 @@ export interface LineComment {
    */
   requireWhitespaceBefore?: boolean;
   /**
+   * If true, the token only starts a comment when it is at the start of the
+   * line (nothing but whitespace before it on the current line). This is
+   * stricter than `requireWhitespaceBefore` (which also allows a token that is
+   * merely preceded by whitespace mid-line). Used for languages such as
+   * Vimscript where a mid-line `"` is ambiguous (string vs comment).
+   */
+  onlyAtLineStart?: boolean;
+  /**
    * If the characters immediately following the token match one of these
    * strings, the token does NOT start a comment (e.g. PHP `#[`).
    */
@@ -168,6 +176,47 @@ export function removeBySpec(
     const len = code.length;
 
     while (i < len) {
+      // 0. Line comments flagged `onlyAtLineStart` are checked BEFORE strings.
+      // This is required for languages (e.g. Vimscript) whose line-comment
+      // token coincides with a string delimiter (`"`): at line start the token
+      // must be read as a comment, not as the opening of a string. This block
+      // is purely additive — it only fires when a spec opts in via
+      // `onlyAtLineStart`, which no pre-Phase-3 spec does.
+      let matchedLineStart = false;
+      for (const l of lines) {
+        if (!l.onlyAtLineStart) continue;
+        if (!code.startsWith(l.token, i)) continue;
+        if (!onlyWhitespaceBeforeOnLine(code, i)) continue;
+
+        if (l.notIfFollowedBy && l.notIfFollowedBy.length > 0) {
+          const after = code.substring(i + l.token.length);
+          if (l.notIfFollowedBy.some((s) => s.length > 0 && after.startsWith(s))) {
+            continue;
+          }
+        }
+
+        let j = i + l.token.length;
+        let commentText = l.token;
+        while (j < len && code[j] !== '\n') {
+          commentText += code[j];
+          j++;
+        }
+
+        const keep =
+          (preserveLicense && isLicenseComment(commentText)) ||
+          preserve.some((re) => re.test(commentText));
+
+        if (keep) {
+          result += commentText;
+        } else {
+          result = trimTrailingWhitespaceOnLastLine(result);
+        }
+        i = j;
+        matchedLineStart = true;
+        break;
+      }
+      if (matchedLineStart) continue;
+
       // 1. String literals - copied verbatim.
       let matchedString = false;
       for (const s of strings) {
@@ -273,6 +322,13 @@ export function removeBySpec(
           if (!prevIsWs && !onlyWhitespaceBeforeOnLine(code, i)) {
             continue;
           }
+        }
+
+        // onlyAtLineStart: token must be at the start of the line (only
+        // whitespace before it on the current line). Stricter than
+        // requireWhitespaceBefore.
+        if (l.onlyAtLineStart && !onlyWhitespaceBeforeOnLine(code, i)) {
+          continue;
         }
 
         // notIfFollowedBy: the char(s) right after the token disqualify it.

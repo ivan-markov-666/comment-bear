@@ -56,7 +56,29 @@ export type Lang =
   | "glsl"
   | "hlsl"
   | "wgsl"
-  | "json5";
+  | "json5"
+  | "lua"
+  | "elm"
+  | "ada"
+  | "vhdl"
+  | "applescript"
+  | "clojure"
+  | "commonlisp"
+  | "scheme"
+  | "emacslisp"
+  | "assembly"
+  | "erlang"
+  | "latex"
+  | "matlab"
+  | "prolog"
+  | "ocaml"
+  | "fsharp"
+  | "sml"
+  | "pascal"
+  | "vb"
+  | "batch"
+  | "fortran"
+  | "vimscript";
 
 /**
  * Comment removal options
