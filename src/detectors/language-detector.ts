@@ -412,19 +412,27 @@ export function detectLanguageByContent(code: string): Lang | undefined {
     }
   }
   
-  // Ruby - check for Ruby-specific patterns first (before Python since they share some syntax)
-  // Check for Ruby's def/end pattern
-  if ((/^\s*def\s+\w+\s*[\s\S]*?\n\s*end\b/m.test(trimmed) && /\bend\b/m.test(trimmed)) ||
-      // Ruby's class/module with end
-      /^\s*(class|module)\s+[\w:]+\s*(<\s*[\w:]+)?\s*\n[\s\S]*?\n\s*end\b/m.test(trimmed) ||
-      // Ruby's puts with string
+  // Ruby - check for Ruby-specific patterns first (before Python since they share some syntax).
+  //
+  // NOTE: these checks deliberately AVOID patterns that pair a greedy token run
+  // with a lazy `[\s\S]*?` / `.*` (e.g. `def\s+\w+ ... [\s\S]*?\n\s*end`). On a
+  // large input with no match such patterns backtrack quadratically (a ReDoS
+  // hang, since this runs on every input that has no explicit language). Instead
+  // we test each cheap, linear signal independently and combine them with AND.
+  const hasEndLine = /^\s*end\b/m.test(trimmed);
+  if (
+      // Ruby's def/end pattern: a `def NAME` line and a standalone `end` line.
+      (/^\s*def\s+\w+/m.test(trimmed) && hasEndLine) ||
+      // Ruby's class/module with end.
+      (/^\s*(class|module)\s+[\w:]+/m.test(trimmed) && hasEndLine) ||
+      // Ruby's puts with string.
       /\bputs\s+["']/.test(trimmed) ||
-      // Ruby's begin/end blocks
-      /\bbegin\b[\s\S]*?\bend\b/m.test(trimmed) ||
-      // Ruby's do/end blocks
-      /\bdo\s*\|.*\|\s*\n[\s\S]*?\n\s*end\b/m.test(trimmed) ||
-      // Ruby's multi-line comments
-      /^=begin\s*\n[\s\S]*?\n=end\b/m.test(trimmed)) {
+      // Ruby's begin/end blocks.
+      (/\bbegin\b/.test(trimmed) && /\bend\b/.test(trimmed)) ||
+      // Ruby's do |...| blocks (the pipe section is bounded to one line).
+      (/\bdo\s*\|[^|\n]*\|/.test(trimmed) && hasEndLine) ||
+      // Ruby's multi-line comments (=begin / =end on their own lines).
+      (/^=begin\b/m.test(trimmed) && /^=end\b/m.test(trimmed))) {
     return 'ruby';
   }
   
@@ -521,11 +529,26 @@ export function detectLanguageByContent(code: string): Lang | undefined {
     return 'javascript';
   }
   
-  // CSS - check for CSS selectors
-  if (/[.#]?\w+\s*\{[\s\S]*\}/m.test(trimmed)) {
-    return 'css';
+  // CSS - check for CSS selectors.
+  //
+  // NOTE: avoid quantifier-based patterns like `/[.#]?\w+\s*\{[\s\S]*\}/` or
+  // even `/[.#]?[\w-]+[ \t]*\{/` — a `+` run that must be followed by a literal
+  // backtracks quadratically when the literal is absent (a ReDoS hang, since
+  // this runs on every input with no explicit language). Instead scan linearly:
+  // find a `{`, then confirm the char just before it (skipping spaces/tabs) is a
+  // plausible selector char, and that a closing `}` exists after it.
+  const braceIdx = trimmed.indexOf('{');
+  if (braceIdx !== -1 && trimmed.indexOf('}', braceIdx) !== -1) {
+    let k = braceIdx - 1;
+    while (k >= 0 && (trimmed[k] === ' ' || trimmed[k] === '\t')) k--;
+    // The token before `{` must look like the end of a selector: a word char,
+    // or one of `.` `#` `*` (class/id/universal). This rejects symbol-only
+    // input such as `[]{}` while still matching `.foo{`, `#id{`, `div {`, `*{`.
+    if (k >= 0 && /[\w.#*]/.test(trimmed[k])) {
+      return 'css';
+    }
   }
-  
+
   return undefined;
 }
 
