@@ -141,6 +141,48 @@ const EXTENSION_MAP: Record<string, Lang> = {
   '.tf': 'hcl',
   '.hcl': 'hcl',
   '.tfvars': 'hcl',
+
+  // Dart
+  '.dart': 'dart',
+
+  // Groovy
+  '.groovy': 'groovy',
+  '.gradle': 'groovy',
+
+  // Solidity
+  '.sol': 'solidity',
+
+  // Protocol Buffers
+  '.proto': 'protobuf',
+
+  // Objective-C
+  '.m': 'objectivec',
+  '.mm': 'objectivec',
+
+  // Zig
+  '.zig': 'zig',
+
+  // Vala
+  '.vala': 'vala',
+
+  // D
+  '.d': 'd',
+
+  // GLSL (shading languages)
+  '.glsl': 'glsl',
+  '.vert': 'glsl',
+  '.frag': 'glsl',
+  '.comp': 'glsl',
+
+  // HLSL
+  '.hlsl': 'hlsl',
+
+  // WGSL
+  '.wgsl': 'wgsl',
+
+  // JSON5 / JSONC
+  '.json5': 'json5',
+  '.jsonc': 'json5',
 };
 
 /**

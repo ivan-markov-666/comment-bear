@@ -52,6 +52,20 @@ import {
   removeLessComments,
   removeSassComments
 } from './removers/hash-remover';
+import {
+  removeDartComments,
+  removeGroovyComments,
+  removeSolidityComments,
+  removeProtobufComments,
+  removeObjectiveCComments,
+  removeZigComments,
+  removeValaComments,
+  removeDComments,
+  removeGlslComments,
+  removeHlslComments,
+  removeWgslComments,
+  removeJson5Comments
+} from './removers/cstyle-extra-remover';
 
 import { Lang, RemoveOptions, RemoveResult } from './types';
 import { detectLanguage, detectLanguageByFilename } from './detectors/language-detector';
@@ -276,6 +290,44 @@ export function removeComments(code: any, options: RemoveOptions = {}): RemoveRe
   case 'sass':
     processedCode = removeSassComments(code, preserveLicense, keepEmptyLines);
     break;
+
+  // Phase 2 C-style-comment languages.
+  case 'dart':
+    processedCode = removeDartComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'groovy':
+    processedCode = removeGroovyComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'solidity':
+    processedCode = removeSolidityComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'protobuf':
+    processedCode = removeProtobufComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'objectivec':
+    processedCode = removeObjectiveCComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'zig':
+    processedCode = removeZigComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'vala':
+    processedCode = removeValaComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'd':
+    processedCode = removeDComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'glsl':
+    processedCode = removeGlslComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'hlsl':
+    processedCode = removeHlslComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'wgsl':
+    processedCode = removeWgslComments(code, preserveLicense, keepEmptyLines);
+    break;
+  case 'json5':
+    processedCode = removeJson5Comments(code, preserveLicense, keepEmptyLines);
+    break;
 }
   } catch (error) {
     console.error(`Error removing comments for language ${language}:`, error);
@@ -328,6 +380,18 @@ function countComments(code: string, language: Lang, preserveLicense: boolean = 
       case 'php':
       case 'kotlin':
       case 'scala':
+      case 'dart':
+      case 'groovy':
+      case 'solidity':
+      case 'protobuf':
+      case 'objectivec':
+      case 'zig':
+      case 'vala':
+      case 'd':
+      case 'glsl':
+      case 'hlsl':
+      case 'wgsl':
+      case 'json5':
         if (trimmed.startsWith('//') || trimmed.startsWith('/*')) {
           count++;
         }

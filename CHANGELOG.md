@@ -6,11 +6,17 @@ All notable changes to the Comment Bear project will be documented in this file.
 
 ### Added
 - Shared comment-removal engine (`removeBySpec` in `src/removers/_shared.ts`) that is aware of string/character literals, nested block comments, license/directive preservation and `keepEmptyLines`.
-- 22 new languages: Shell/Bash, PowerShell, Perl (incl. POD blocks), R, TOML, Makefile, Dockerfile, INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript, Tcl, CMake, Java `.properties`, Puppet, HCL/Terraform, SCSS, LESS, Sass.
+- 22 hash-family languages: Shell/Bash, PowerShell, Perl (incl. POD blocks), R, TOML, Makefile, Dockerfile, INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript, Tcl, CMake, Java `.properties`, Puppet, HCL/Terraform, SCSS, LESS, Sass.
+- 12 C-style languages: Dart, Groovy/Gradle, Solidity, Protobuf, Objective-C (incl. `@"..."` literals), Zig, Vala, D (`/+ +/` nested blocks), GLSL, HLSL, WGSL, JSON5.
 - Language detection by shebang (`#!/usr/bin/env bash` → shell, etc.) and by special filename (`Makefile`, `Dockerfile`, `CMakeLists.txt`).
 - `keepEmptyLines` support for HTML, CSS, XML, SQL and JSON removers.
 - `mergeConfig` and `validateConfig` are now re-exported from the package entry point.
-- 153 new tests (total 1196+).
+- GitHub Actions CI (Node 18/20/22 × Ubuntu/Windows/macOS) with type-check, build, test and a coverage job.
+- 220 new tests (total 1263+).
+
+### Changed
+- Fixed npm metadata: `repository`/`bugs`/`homepage` now point at the `comment-bear` repo; added `author` and `engines` (Node >= 16).
+- Cross-platform `clean` script (Node `fs.rmSync` instead of `rm -rf`); added `prepublishOnly` (build + test) and `test:coverage` scripts.
 
 ### Fixed
 - YAML: `#` is now only treated as a comment at line start or after whitespace, so values like `url: http://x#frag` and `color:#fff` are preserved.

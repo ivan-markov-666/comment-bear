@@ -131,3 +131,26 @@ describe('Phase 1 language detection', () => {
     expect(detectLanguage(undefined, '#!/bin/bash\necho hi')).toBe('shell');
   });
 });
+
+describe('Phase 2 language detection', () => {
+  test('detects new extensions by filename', () => {
+    expect(detectLanguageByFilename('main.dart')).toBe('dart');
+    expect(detectLanguageByFilename('build.groovy')).toBe('groovy');
+    expect(detectLanguageByFilename('build.gradle')).toBe('groovy');
+    expect(detectLanguageByFilename('Token.sol')).toBe('solidity');
+    expect(detectLanguageByFilename('schema.proto')).toBe('protobuf');
+    expect(detectLanguageByFilename('app.m')).toBe('objectivec');
+    expect(detectLanguageByFilename('app.mm')).toBe('objectivec');
+    expect(detectLanguageByFilename('main.zig')).toBe('zig');
+    expect(detectLanguageByFilename('app.vala')).toBe('vala');
+    expect(detectLanguageByFilename('main.d')).toBe('d');
+    expect(detectLanguageByFilename('shader.glsl')).toBe('glsl');
+    expect(detectLanguageByFilename('shader.vert')).toBe('glsl');
+    expect(detectLanguageByFilename('shader.frag')).toBe('glsl');
+    expect(detectLanguageByFilename('shader.comp')).toBe('glsl');
+    expect(detectLanguageByFilename('shader.hlsl')).toBe('hlsl');
+    expect(detectLanguageByFilename('shader.wgsl')).toBe('wgsl');
+    expect(detectLanguageByFilename('config.json5')).toBe('json5');
+    expect(detectLanguageByFilename('config.jsonc')).toBe('json5');
+  });
+});

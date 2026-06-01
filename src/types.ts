@@ -44,7 +44,19 @@ export type Lang =
   | "hcl"
   | "scss"
   | "less"
-  | "sass";
+  | "sass"
+  | "dart"
+  | "groovy"
+  | "solidity"
+  | "protobuf"
+  | "objectivec"
+  | "zig"
+  | "vala"
+  | "d"
+  | "glsl"
+  | "hlsl"
+  | "wgsl"
+  | "json5";
 
 /**
  * Comment removal options

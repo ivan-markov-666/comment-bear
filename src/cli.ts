@@ -25,7 +25,9 @@ const VALID_LANGUAGES: Lang[] = [
   'php', 'go', 'rust', 'swift', 'kotlin', 'scala', 'haskell',
   'shell', 'powershell', 'perl', 'r', 'toml', 'makefile', 'dockerfile',
   'ini', 'graphql', 'elixir', 'crystal', 'julia', 'nim', 'coffeescript',
-  'tcl', 'cmake', 'properties', 'puppet', 'hcl', 'scss', 'less', 'sass'
+  'tcl', 'cmake', 'properties', 'puppet', 'hcl', 'scss', 'less', 'sass',
+  'dart', 'groovy', 'solidity', 'protobuf', 'objectivec', 'zig', 'vala',
+  'd', 'glsl', 'hlsl', 'wgsl', 'json5'
 ];
 
 export function parseArgs(args: string[]): CliOptions {
@@ -130,7 +132,8 @@ Supported languages:
   kotlin, scala, haskell, shell, powershell, perl, r, toml,
   makefile, dockerfile, ini, graphql, elixir, crystal, julia,
   nim, coffeescript, tcl, cmake, properties, puppet, hcl,
-  scss, less, sass
+  scss, less, sass, dart, groovy, solidity, protobuf, objectivec,
+  zig, vala, d, glsl, hlsl, wgsl, json5
 
 Examples:
   comment-bear src/index.js                    # Print to stdout

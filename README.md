@@ -8,16 +8,16 @@
   [![GitHub](https://img.shields.io/badge/GitHub-Repository-blue?style=flat-square&logo=github)](https://github.com/ivan-markov-666/comment-bear)
   [![npm](https://img.shields.io/badge/npm-comment--bear-blue?style=flat-square&logo=npm)](https://www.npmjs.com/package/comment-bear)
   [![CI](https://github.com/ivan-markov-666/comment-bear/actions/workflows/ci.yml/badge.svg)](https://github.com/ivan-markov-666/comment-bear/actions/workflows/ci.yml)
-  [![Tests](https://img.shields.io/badge/tests-1196%2B-brightgreen?style=flat-square)](https://github.com/ivan-markov-666/comment-bear/actions)
+  [![Tests](https://img.shields.io/badge/tests-1263%2B-brightgreen?style=flat-square)](https://github.com/ivan-markov-666/comment-bear/actions)
   [![License](https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square)](LICENSE)
 
-  🐻 A fast and friendly tool for removing comments from code in 40+ programming languages. Built with TypeScript and thoroughly tested with 1196+ tests to ensure reliability and quality.
+  🐻 A fast and friendly tool for removing comments from code in 50+ programming languages. Built with TypeScript and thoroughly tested with 1263+ tests to ensure reliability and quality.
 </div>
 
 ## ✨ Features
 
-- 🌐 **Language Support (40+ languages)**:
-  - **C-style** (`//`, `/* */`): JavaScript, TypeScript, Java, C#, C, C++, Go, Rust, Swift, Kotlin, Scala, PHP, SCSS, LESS, Sass, HCL/Terraform, Puppet
+- 🌐 **Language Support (50+ languages)**:
+  - **C-style** (`//`, `/* */`): JavaScript, TypeScript, Java, C#, C, C++, Go, Rust, Swift, Kotlin, Scala, PHP, Dart, Groovy/Gradle, Solidity, Protobuf, Objective-C, Zig, Vala, D, GLSL, HLSL, WGSL, JSON5, SCSS, LESS, Sass, HCL/Terraform, Puppet
   - **Hash-style** (`#`): Python, Ruby, Shell/Bash, PowerShell, Perl, R, TOML, YAML, Makefile, Dockerfile, INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript, Tcl, CMake, Java `.properties`
   - **Markup & data**: HTML, XML, CSS, SQL, JSON, Haskell
   - *More languages coming soon!*
@@ -121,6 +121,8 @@ type Lang =
   | "javascript" | "typescript" | "java" | "csharp"
   | "c" | "cpp" | "go" | "rust" | "swift"
   | "kotlin" | "scala" | "php"
+  | "dart" | "groovy" | "solidity" | "protobuf" | "objectivec"
+  | "zig" | "vala" | "d" | "glsl" | "hlsl" | "wgsl" | "json5"
   | "scss" | "less" | "sass" | "hcl" | "puppet"
   // Hash-style (#)
   | "python" | "ruby" | "shell" | "powershell" | "perl"
@@ -436,10 +438,12 @@ comment-bear/
 │       ├── sql-remover.ts
 │       ├── c-style-remover.ts  # Java, C#, C, C++, PHP, Go, Rust, Swift, Kotlin, Scala
 │       ├── other-remover.ts    # JSON, YAML, Ruby, Haskell
-│       └── hash-remover.ts     # Shell, PowerShell, Perl, R, TOML, Makefile, Dockerfile,
-│                               # INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript,
-│                               # Tcl, CMake, properties, Puppet, HCL, SCSS, LESS, Sass
-├── test/                     # Tests (1196+ test cases)
+│       ├── hash-remover.ts     # Shell, PowerShell, Perl, R, TOML, Makefile, Dockerfile,
+│       │                       # INI, GraphQL, Elixir, Crystal, Julia, Nim, CoffeeScript,
+│       │                       # Tcl, CMake, properties, Puppet, HCL, SCSS, LESS, Sass
+│       └── cstyle-extra-remover.ts # Dart, Groovy, Solidity, Protobuf, Objective-C, Zig,
+│                                   # Vala, D, GLSL, HLSL, WGSL, JSON5
+├── test/                     # Tests (1263+ test cases)
 ├── dist/                     # Compiled files (auto-generated)
 ├── package.json
 ├── tsconfig.json
