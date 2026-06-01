@@ -26,7 +26,10 @@ export function removeShellComments(
   keepEmptyLines: boolean = false
 ): string {
   const spec: CommentSpec = {
-    line: [{ token: '#' }],
+    // In shell a `#` only starts a comment at the start of a word, i.e. at the
+    // start of a line or immediately after whitespace. This protects `$#`,
+    // `${#arr}`, `$((2#101))` and mid-word `a#b`.
+    line: [{ token: '#', requireWhitespaceBefore: true }],
     strings: [
       { open: '"', close: '"', escape: '\\' },
       { open: "'", close: "'", escape: null },
@@ -50,6 +53,15 @@ export function removePowerShellComments(
   preserveLicense: boolean = false,
   keepEmptyLines: boolean = false
 ): string {
+  if (!code) return code;
+
+  // Pre-pass: protect here-string regions (`@"..."@` / `@'...'@`). A `#`
+  // inside a here-string is literal text, not a comment, but here-strings are
+  // multi-line and cannot be expressed as a single-line string delimiter. We
+  // replace each here-string region with an opaque placeholder, run the
+  // generic engine, then restore the regions verbatim.
+  const { masked, regions } = maskPowerShellHereStrings(code);
+
   const spec: CommentSpec = {
     line: [{ token: '#' }],
     block: [{ open: '<#', close: '#>' }],
@@ -58,7 +70,90 @@ export function removePowerShellComments(
       { open: "'", close: "'", escape: null },
     ],
   };
-  return removeBySpec(code, spec, preserveLicense, keepEmptyLines);
+  let out = removeBySpec(masked, spec, preserveLicense, keepEmptyLines);
+
+  for (let k = 0; k < regions.length; k++) {
+    // Match the core token and absorb the (optional) padding spaces the mask
+    // added — the engine may have trimmed a trailing space on the line.
+    const re = new RegExp(' ?' + placeholderCore(k) + ' ?');
+    out = out.replace(re, () => regions[k]);
+  }
+  return out;
+}
+
+/** The core letters/digits token for the k-th here-string region. */
+function placeholderCore(k: number): string {
+  return 'CBHERESTRING' + String(k);
+}
+
+/** Builds the opaque placeholder token (with padding) for region `k`. */
+function herePlaceholder(k: number): string {
+  // Surrounded by spaces and built from letters/digits only (no `#`, `"`,
+  // `'`, `<`, `>`) so the engine treats it as inert, isolated identifier text.
+  return ' ' + placeholderCore(k) + ' ';
+}
+
+/**
+ * Replaces PowerShell here-string regions with opaque placeholders so the
+ * generic comment engine cannot misread a `#` inside one as a comment.
+ *
+ * A here-string opens with `@"` or `@'` as the last non-whitespace token on a
+ * line and closes on a line that begins (column 0) with the matching `"@` or
+ * `'@`. The whole region (opener line through closer token) is captured and
+ * replaced with {@link herePlaceholder}; the captured text is restored
+ * verbatim afterwards.
+ */
+function maskPowerShellHereStrings(code: string): {
+  masked: string;
+  regions: string[];
+} {
+  const regions: string[] = [];
+  let masked = '';
+  let i = 0;
+  const len = code.length;
+
+  while (i < len) {
+    // Detect an opener `@"` or `@'` that is the last token on its line.
+    if (code[i] === '@' && (code[i + 1] === '"' || code[i + 1] === "'")) {
+      const quote = code[i + 1];
+      // Everything after the opener up to the newline must be whitespace.
+      let k = i + 2;
+      while (k < len && code[k] !== '\n' && (code[k] === ' ' || code[k] === '\t' || code[k] === '\r')) {
+        k++;
+      }
+      if (k >= len || code[k] === '\n') {
+        // Valid opener. Find the closing line that starts with `"@`/`'@`.
+        const closer = quote + '@';
+        // Begin scanning after the opener line's newline.
+        let lineStart = code.indexOf('\n', i);
+        if (lineStart !== -1) {
+          lineStart += 1;
+          let end = -1;
+          let p = lineStart;
+          while (p <= len) {
+            if (code.startsWith(closer, p)) {
+              end = p + closer.length;
+              break;
+            }
+            const nextNl = code.indexOf('\n', p);
+            if (nextNl === -1) break;
+            p = nextNl + 1;
+          }
+          if (end !== -1) {
+            const region = code.substring(i, end);
+            masked += herePlaceholder(regions.length);
+            regions.push(region);
+            i = end;
+            continue;
+          }
+        }
+      }
+    }
+    masked += code[i];
+    i++;
+  }
+
+  return { masked, regions };
 }
 
 /**
@@ -216,7 +311,9 @@ export function removeMakefileComments(
   keepEmptyLines: boolean = false
 ): string {
   const spec: CommentSpec = {
-    line: [{ token: '#' }],
+    // In a Makefile a backslash escapes the `#` to a literal (`a\#b`), so an
+    // escaped `#` is not a comment.
+    line: [{ token: '#', ignoreIfEscaped: true }],
   };
   return removeBySpec(code, spec, preserveLicense, keepEmptyLines);
 }
@@ -313,6 +410,9 @@ export function removeElixirComments(
 ): string {
   const spec: CommentSpec = {
     line: [{ token: '#' }],
+    // Elixir char literals are written `?X` (or `?\n`); `?#` is the char `#`,
+    // not a comment. Protect the `?` + next-char pair.
+    charLiteralPrefixes: ['?'],
     strings: [
       { open: '"""', close: '"""', multiline: true },
       { open: '"', close: '"' },
@@ -487,7 +587,12 @@ export function removePropertiesComments(
   keepEmptyLines: boolean = false
 ): string {
   const spec: CommentSpec = {
-    line: [{ token: '#' }, { token: '!' }],
+    // In a `.properties` file a backslash escapes the comment char to a
+    // literal (`a\#b`), so an escaped `#`/`!` is not a comment.
+    line: [
+      { token: '#', ignoreIfEscaped: true },
+      { token: '!', ignoreIfEscaped: true },
+    ],
   };
   return removeBySpec(code, spec, preserveLicense, keepEmptyLines);
 }

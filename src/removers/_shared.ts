@@ -54,6 +54,16 @@ export interface BlockComment {
   close: string;
   /** Whether block comments may nest (track depth). Default false. */
   nested?: boolean;
+  /**
+   * String delimiters that are recognised WHILE scanning inside this block
+   * comment. When set, the scanner skips over a string literal it finds inside
+   * the comment so that a closing token (or nested opener) appearing inside the
+   * string does not affect the comment's depth. This models OCaml/SML, where
+   * `(* "*)" *)` is a single comment because the `*)` lives inside a string.
+   * Only applies to nested block comments and is opt-in; languages that do not
+   * set it are unaffected.
+   */
+  skipStringsInside?: StringDelimiter[];
 }
 
 /**
@@ -80,6 +90,14 @@ export interface LineComment {
    * strings, the token does NOT start a comment (e.g. PHP `#[`).
    */
   notIfFollowedBy?: string[];
+  /**
+   * If true, the token does NOT start a comment when the character immediately
+   * before it is a backslash (`\`). Used for languages where a backslash
+   * escapes the comment character to produce a literal (e.g. Makefile /
+   * `.properties` `\#` is a literal `#`, not a comment). The escaping
+   * backslash and the token are both emitted verbatim.
+   */
+  ignoreIfEscaped?: boolean;
 }
 
 /**
@@ -104,6 +122,24 @@ export interface CommentSpec {
    * unaffected.
    */
   regexLiterals?: boolean;
+  /**
+   * Single characters that, when they appear at a code position immediately
+   * before a non-whitespace character, introduce a one-character "char literal"
+   * that must be copied verbatim so a following comment token is not matched.
+   *
+   * Examples:
+   *   - Elixir `?X` / `?\n`  → prefix `'?'`
+   *   - Erlang `$X` / `$\n`  → prefix `'$'`
+   *   - Lisp `\X`            → prefix `'\\'`
+   *
+   * When the scanner is at a code position (not inside a string/comment) and
+   * sees a prefix char followed by another non-whitespace char, it emits the
+   * prefix plus the next char (or `\X` escape pair) verbatim and skips past
+   * them. This prevents e.g. Elixir `?#` from being read as `?` followed by a
+   * `#` comment. Languages that do not set this field are completely
+   * unaffected.
+   */
+  charLiteralPrefixes?: string[];
   /**
    * When true, an inline comment (block OR line) is removed WITHOUT trimming
    * the run of whitespace that preceded it on the current line. This
@@ -477,6 +513,7 @@ export function removeBySpec(
     const len = code.length;
     const regexLiterals = spec.regexLiterals === true;
     const preserveInlineBlockWhitespace = spec.preserveInlineBlockWhitespace === true;
+    const charLiteralPrefixes = spec.charLiteralPrefixes || [];
 
     // Defense-in-depth safety valve: a correct linear scan advances `i` (or
     // appends to `result`) on every iteration, so it can never exceed a small
@@ -568,6 +605,41 @@ export function removeBySpec(
       }
       if (matchedLineStart) continue;
 
+      // 0b. Char literals (opt-in via `spec.charLiteralPrefixes`). At a code
+      // position, a prefix char (e.g. Elixir `?`, Erlang `$`, Lisp `\`)
+      // immediately followed by a non-whitespace char introduces a
+      // single-character literal. Emit the prefix and the next char (consuming
+      // a `\X` escape pair as a whole) verbatim and skip, so the following char
+      // cannot start a comment (e.g. Elixir `?#` is the char `#`, not a `#`
+      // comment). Only fires when a spec opts in; other languages unaffected.
+      if (charLiteralPrefixes.length > 0) {
+        let matchedCharLiteral = false;
+        for (const prefix of charLiteralPrefixes) {
+          if (prefix.length === 0 || !code.startsWith(prefix, i)) continue;
+          const next = code[i + prefix.length];
+          if (next === undefined) continue;
+          // The literal char must be a non-whitespace char (a bare prefix at
+          // end of token / before whitespace is just an operator/symbol).
+          if (next === ' ' || next === '\t' || next === '\n' || next === '\r') {
+            continue;
+          }
+          // Emit prefix + the literal char. If the literal char is a backslash
+          // escape (`\X`), consume the escaped char too so e.g. Erlang `$\n`
+          // stays intact.
+          if (next === '\\' && code[i + prefix.length + 1] !== undefined) {
+            result += code.substring(i, i + prefix.length + 2);
+            i += prefix.length + 2;
+          } else {
+            result += code.substring(i, i + prefix.length + 1);
+            i += prefix.length + 1;
+          }
+          if (regexLiterals) markValueLiteral(state, next);
+          matchedCharLiteral = true;
+          break;
+        }
+        if (matchedCharLiteral) continue;
+      }
+
       // 1. String literals - copied verbatim.
       let matchedString = false;
       for (const s of strings) {
@@ -613,7 +685,41 @@ export function removeBySpec(
           let j = i + b.open.length;
           if (b.nested) {
             let depth = 1;
+            const innerStrings = b.skipStringsInside || [];
             while (j < len && depth > 0) {
+              // Skip over a string literal inside the comment so a `*)` (or
+              // nested opener) within the string does not change the depth.
+              if (innerStrings.length > 0) {
+                let skippedString = false;
+                for (const s of innerStrings) {
+                  if (!code.startsWith(s.open, j)) continue;
+                  const escape = s.escape === undefined ? '\\' : s.escape;
+                  const multiline = s.multiline === true;
+                  let q = j + s.open.length;
+                  commentContent += s.open;
+                  while (q < len) {
+                    if (escape !== null && code[q] === escape && q + 1 < len) {
+                      commentContent += code[q] + code[q + 1];
+                      q += 2;
+                      continue;
+                    }
+                    if (!multiline && code[q] === '\n') {
+                      break;
+                    }
+                    if (code.startsWith(s.close, q)) {
+                      commentContent += s.close;
+                      q += s.close.length;
+                      break;
+                    }
+                    commentContent += code[q];
+                    q++;
+                  }
+                  j = q;
+                  skippedString = true;
+                  break;
+                }
+                if (skippedString) continue;
+              }
               if (code.startsWith(b.open, j)) {
                 depth++;
                 commentContent += b.open;
@@ -674,6 +780,12 @@ export function removeBySpec(
       let matchedLine = false;
       for (const l of lines) {
         if (!code.startsWith(l.token, i)) continue;
+
+        // ignoreIfEscaped: a `\` immediately before the token escapes it to a
+        // literal (e.g. Makefile / `.properties` `\#`), so it is not a comment.
+        if (l.ignoreIfEscaped && i > 0 && code[i - 1] === '\\') {
+          continue;
+        }
 
         // requireWhitespaceBefore: token must be at line start (only
         // whitespace before) OR immediately preceded by whitespace.

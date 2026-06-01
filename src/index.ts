@@ -113,6 +113,12 @@ import { detectLanguage, detectLanguageByFilename } from './detectors/language-d
  * ```
  */
 export function removeComments(code: any, options: RemoveOptions = {}): RemoveResult {
+  // Guard against `null` (and other non-object) options — the `= {}` default
+  // only applies to `undefined`, so `removeComments(code, null)` would throw.
+  if (options === null || typeof options !== 'object') {
+    options = {};
+  }
+
   // Handle non-string input by converting to string
   if (typeof code !== 'string') {
     if (code === null || code === undefined) {
@@ -122,12 +128,22 @@ export function removeComments(code: any, options: RemoveOptions = {}): RemoveRe
         detectedLanguage: undefined
       };
     }
-    
-    // Convert non-string values to string, but handle objects/arrays specially
-    const stringValue = typeof code.toString === 'function' 
-      ? code.toString() 
-      : String(code);
-      
+
+    // Convert non-string values to a string defensively: a custom `toString`
+    // may throw or return a non-string. Fall back to String(), and finally to
+    // the empty string, so we never throw and `code` is always a string.
+    let stringValue: string;
+    try {
+      const raw = typeof code.toString === 'function' ? code.toString() : String(code);
+      stringValue = typeof raw === 'string' ? raw : String(raw);
+    } catch {
+      try {
+        stringValue = String(code);
+      } catch {
+        stringValue = '';
+      }
+    }
+
     return {
       code: stringValue,
       removedCount: 0,

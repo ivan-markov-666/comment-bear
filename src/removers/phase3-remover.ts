@@ -295,6 +295,9 @@ export function removeClojureComments(
 ): string {
   const spec: CommentSpec = {
     line: [{ token: ';' }],
+    // Clojure char literals are written `\X` (e.g. `\;`, `\newline`); `\;` is
+    // the semicolon char, not a comment. Protect the `\` + next-char pair.
+    charLiteralPrefixes: ['\\'],
     strings: [{ open: '"', close: '"', escape: '\\' }],
   };
   return removeBySpec(code, spec, preserveLicense, keepEmptyLines);
@@ -319,6 +322,10 @@ export function removeCommonLispComments(
   const spec: CommentSpec = {
     line: [{ token: ';' }],
     block: [{ open: '#|', close: '|#', nested: true }],
+    // Common Lisp character literals are written `#\X` (e.g. `#\;`); the
+    // trailing `\;` here is the semicolon char, not a comment. Protect the
+    // `\` + next-char pair.
+    charLiteralPrefixes: ['\\'],
     strings: [{ open: '"', close: '"', escape: '\\' }],
   };
   return removeBySpec(code, spec, preserveLicense, keepEmptyLines);
@@ -344,6 +351,10 @@ export function removeSchemeComments(
   const spec: CommentSpec = {
     line: [{ token: ';' }],
     block: [{ open: '#|', close: '|#', nested: true }],
+    // Scheme character literals are written `#\X` (e.g. `#\;`); the trailing
+    // `\;` here is the semicolon char, not a comment. Protect the `\` +
+    // next-char pair.
+    charLiteralPrefixes: ['\\'],
     strings: [{ open: '"', close: '"', escape: '\\' }],
   };
   return removeBySpec(code, spec, preserveLicense, keepEmptyLines);
@@ -418,6 +429,9 @@ export function removeErlangComments(
 ): string {
   const spec: CommentSpec = {
     line: [{ token: '%' }],
+    // Erlang char literals are written `$X` (or `$\n`); `$%` is the char `%`,
+    // not a comment. Protect the `$` + next-char pair.
+    charLiteralPrefixes: ['$'],
     strings: [{ open: '"', close: '"', escape: '\\' }],
   };
   return removeBySpec(code, spec, preserveLicense, keepEmptyLines);
@@ -584,7 +598,16 @@ export function removeOcamlComments(
   keepEmptyLines: boolean = false
 ): string {
   const spec: CommentSpec = {
-    block: [{ open: '(*', close: '*)', nested: true }],
+    block: [
+      {
+        open: '(*',
+        close: '*)',
+        nested: true,
+        // In OCaml a string inside a comment is honoured: `(* "*)" *)` is one
+        // comment because the first `*)` is inside the string.
+        skipStringsInside: [{ open: '"', close: '"', escape: '\\' }],
+      },
+    ],
     strings: [{ open: '"', close: '"', escape: '\\' }],
   };
   return removeBySpec(code, spec, preserveLicense, keepEmptyLines);
@@ -631,7 +654,15 @@ export function removeSmlComments(
   keepEmptyLines: boolean = false
 ): string {
   const spec: CommentSpec = {
-    block: [{ open: '(*', close: '*)', nested: true }],
+    block: [
+      {
+        open: '(*',
+        close: '*)',
+        nested: true,
+        // SML honours strings inside comments: `(* "*)" *)` is one comment.
+        skipStringsInside: [{ open: '"', close: '"', escape: '\\' }],
+      },
+    ],
     strings: [{ open: '"', close: '"', escape: '\\' }],
   };
   return removeBySpec(code, spec, preserveLicense, keepEmptyLines);
