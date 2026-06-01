@@ -30,6 +30,11 @@ export function removeDartComments(
     line: [{ token: '//' }],
     block: [{ open: '/*', close: '*/', nested: true }],
     strings: [
+      // Triple-quoted strings must be matched BEFORE the single-char forms so
+      // a `//` inside them (e.g. a SQL/URL in a multi-line string) is not
+      // mistaken for a comment.
+      { open: '"""', close: '"""', multiline: true, escape: '\\' },
+      { open: "'''", close: "'''", multiline: true, escape: '\\' },
       { open: '"', close: '"', escape: '\\' },
       { open: "'", close: "'", escape: '\\' },
     ],
@@ -58,6 +63,9 @@ export function removeGroovyComments(
     line: [{ token: '//' }],
     block: [{ open: '/*', close: '*/' }],
     strings: [
+      // Dollar-slashy strings `$/ ... /$` are matched first: they are multi-line
+      // and their body may contain `//` (slashy/regex-like content).
+      { open: '$/', close: '/$', multiline: true, escape: null },
       { open: '"""', close: '"""', multiline: true, escape: '\\' },
       { open: "'''", close: "'''", multiline: true, escape: '\\' },
       { open: '"', close: '"', escape: '\\' },
@@ -196,6 +204,9 @@ export function removeValaComments(
     line: [{ token: '//' }],
     block: [{ open: '/*', close: '*/' }],
     strings: [
+      // Verbatim strings `""" ... """` are multi-line and matched before the
+      // single `"` form so a `//` (e.g. a URL) inside them is preserved.
+      { open: '"""', close: '"""', multiline: true, escape: null },
       { open: '"', close: '"', escape: '\\' },
       { open: "'", close: "'", escape: '\\' },
     ],
@@ -228,6 +239,9 @@ export function removeDComments(
       { open: '/+', close: '+/', nested: true },
     ],
     strings: [
+      // Token strings `q{ ... }` carry arbitrary code-looking text (incl. `//`)
+      // that must be preserved. Matched before the other string forms.
+      { open: 'q{', close: '}', escape: null, multiline: true },
       { open: '"', close: '"', escape: '\\' },
       { open: '`', close: '`', escape: null },
     ],
