@@ -1,6 +1,6 @@
 {
   "name": "comment-bear",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Fast, string-aware comment remover for 40+ programming languages, with CLI, stream API and TypeScript support",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
