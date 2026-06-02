@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.3] - 2026-06-02
 
 A focused correctness/security pass (two audit cycles). All changes are
-backwards compatible; no public API changed. Tests: 1396 → 1520.
+backwards compatible; no public API changed. Tests: 1396 → 1524.
 
 ### Fixed (security)
 - **ReDoS hang in language auto-detection.** `detectLanguageByContent` (run on
@@ -37,9 +37,10 @@ backwards compatible; no public API changed. Tests: 1396 → 1520.
 - **Makefile/properties**: an escaped `\#` is a literal, not a comment.
 - **Dart / Groovy / Vala / D**: comment tokens inside triple-quoted, dollar-slashy
   (`$/…/$`), verbatim (`"""…"""`) and token (`q{…}`) strings are preserved.
-- **SQL `preserveLicense` (data loss)**: a license block comment no longer causes
-  all following statements to be dropped (the block-comment state wasn't reset
-  when the license block closed).
+- **SQL `preserveLicense` (data loss + reordering)**: a license block comment no
+  longer causes all following statements to be dropped, and an inline license
+  comment (`SELECT 1; /* Copyright */`) is no longer reordered ahead of its code.
+  SQL now uses the shared single-pass engine.
 - **Rust `preserveLicense`**: ordinary `//` and `/* */` license/copyright comments
   are now kept (previously only `///`/`//!` doc comments were).
 - **PHP**: `keepEmptyLines` is now honored for `//` and `/* */` comments.
