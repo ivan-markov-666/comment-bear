@@ -123,6 +123,13 @@ function trimEmptyLines(code: string): string {
     lines.pop();
   }
 
+  // For CRLF input the final retained element keeps a trailing '\r' (its '\n'
+  // was consumed by split). Without this, dropping the final newline leaves a
+  // dangling '\r' at end-of-output. Strip it so we don't emit a lone CR.
+  if (lines.length > 0) {
+    lines[lines.length - 1] = lines[lines.length - 1].replace(/\r$/, '');
+  }
+
   return lines.join('\n');
 }
 

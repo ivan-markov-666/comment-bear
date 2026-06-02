@@ -181,6 +181,12 @@ function dropBlankLines(text: string): string {
       cleaned.push(line);
     }
   }
+  // For CRLF input the final retained line keeps a trailing '\r' (its '\n' was
+  // consumed by split); since we drop the trailing newline, strip that lone CR
+  // so the output doesn't end with a dangling '\r'.
+  if (cleaned.length > 0) {
+    cleaned[cleaned.length - 1] = cleaned[cleaned.length - 1].replace(/\r$/, '');
+  }
   return cleaned.join('\n');
 }
 
