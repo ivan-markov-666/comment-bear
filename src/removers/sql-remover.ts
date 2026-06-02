@@ -33,6 +33,10 @@ export function removeSqlComments(
       // Check if this line ends the multiline comment
       if (line.includes('*/')) {
         isPreservingLicense = false;
+        // The block comment is now closed — without this reset, every
+        // following line would be treated as comment interior and dropped
+        // (silent data loss).
+        inMultilineComment = false;
         result.push(licenseCommentBuffer.join('\n'));
         licenseCommentBuffer = [];
       }
@@ -53,6 +57,9 @@ export function removeSqlComments(
           // If the comment ends on the same line, process it immediately
           if (restOfLine.includes('*/')) {
             isPreservingLicense = false;
+            // Reset the block-comment flag — the comment closed on this same
+            // line, so the rest of the file is ordinary code, not interior.
+            inMultilineComment = false;
             result.push(licenseCommentBuffer.join('\n'));
             licenseCommentBuffer = [];
           }
