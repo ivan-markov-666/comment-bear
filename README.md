@@ -27,6 +27,11 @@
 
 > Most languages share one well-tested engine (`removeBySpec`) configured with that language's comment syntax, so adding a language is a few lines of spec plus tests.
 
+## 🧩 Two ways to use it
+
+- **npm package** — the library + CLI (this repo's root). See below.
+- **VS Code extension** — remove comments right in the editor, in a diff preview, or across whole folders. Source in [`extension/`](extension/). It wraps this same engine.
+
 ## 📦 Installation
 
 ```bash
