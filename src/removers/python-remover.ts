@@ -56,8 +56,12 @@ export function removePythonComments(
             }
             continue;
           } else {
-            // It's a regular string, keep it
+            // It's a regular string (or a preserved docstring), keep it.
+            // NOTE: must `continue` — without it execution falls through to the
+            // bottom of the loop and pushes this same line a SECOND time,
+            // duplicating the source line.
             result.push(line);
+            continue;
           }
         } else {
           // Multi-line docstring start

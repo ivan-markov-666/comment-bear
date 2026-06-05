@@ -105,10 +105,34 @@ export function removeYamlComments(
   
   const lines = code.split('\n');
   const result: string[] = [];
-  
+
+  // Block-scalar state. A `key: |` or `key: >` (with optional `-`/`+`/digit
+  // indicators) introduces a literal/folded block scalar whose more-indented
+  // following lines are STRING CONTENT, not YAML — a `#` there is not a comment
+  // and must be preserved verbatim. The block ends at the first non-blank line
+  // indented at or below the indentation of the line that introduced it.
+  let inBlockScalar = false;
+  let blockIndent = 0;
+
+  const indentOf = (s: string): number => {
+    let n = 0;
+    while (n < s.length && (s[n] === ' ' || s[n] === '\t')) n++;
+    return n;
+  };
+
   for (const line of lines) {
     const trimmed = line.trim();
-    
+
+    if (inBlockScalar) {
+      // Blank lines stay inside the block; a non-blank line that is not more
+      // indented than the introducer ends the block.
+      if (trimmed.length === 0 || indentOf(line) > blockIndent) {
+        result.push(line); // verbatim — no comment stripping inside a block scalar
+        continue;
+      }
+      inBlockScalar = false; // fall through and process this line normally
+    }
+
     // Empty line or just a comment
     if (trimmed.startsWith('#')) {
       if (preserveLicense && isLicenseComment(trimmed)) {
@@ -118,20 +142,32 @@ export function removeYamlComments(
       }
       continue;
     }
-    
+
     // Line with code and comment.
     // In YAML, '#' only starts a comment when it is at the start of the line
     // (after leading whitespace) or is immediately preceded by whitespace.
     const commentIndex = findYamlCommentIndex(line);
+    let emitted: string;
     if (commentIndex !== -1) {
       const codeBeforeComment = line.substring(0, commentIndex).trimEnd();
       if (codeBeforeComment.length > 0) {
-        result.push(codeBeforeComment);
-      } else if (keepEmptyLines) {
-        result.push('');
+        emitted = codeBeforeComment;
+        result.push(emitted);
+      } else {
+        emitted = '';
+        if (keepEmptyLines) result.push('');
       }
     } else {
+      emitted = line;
       result.push(line);
+    }
+
+    // After emitting the (comment-stripped) line, detect a block-scalar
+    // introducer: a `|` or `>` indicator at the END of the value, optionally
+    // followed by `-`/`+` and/or a digit (e.g. `|`, `|-`, `>+`, `|2`, `|2-`).
+    if (/(^|[\s:])[|>][0-9]*[-+]?\s*$/.test(emitted)) {
+      inBlockScalar = true;
+      blockIndent = indentOf(line);
     }
   }
 
@@ -191,6 +227,216 @@ function findYamlCommentIndex(line: string): number {
   return -1;
 }
 
+/** Matching close delimiter for paired bracket percent-literal delimiters. */
+const RUBY_PAIRED_DELIMITERS: Record<string, string> = {
+  '(': ')',
+  '[': ']',
+  '{': '}',
+  '<': '>',
+};
+
+/**
+ * Scans Ruby source and replaces percent literals (`%q{...}`, `%w[...]`,
+ * `%r{...}`, `%(...)`, etc.) and heredoc bodies with opaque placeholders so a
+ * `#` inside them is never treated as a comment. The scan is a single O(n)
+ * pass that tracks string state, so a `%` or `<<` inside a string or after a
+ * value (where it is the modulo/left-shift operator) is left untouched.
+ *
+ * Returns the rewritten source plus the placeholder -> original-content map.
+ */
+function protectRubyLiterals(code: string): {
+  text: string;
+  literals: string[];
+} {
+  const literals: string[] = [];
+  let out = '';
+  let i = 0;
+  const n = code.length;
+  // Tracks the previous significant (non-space) char on the current logical
+  // position to decide value-position for `%` and `<<`. Reset at newlines.
+  let prevSignificant = '';
+
+  const addPlaceholder = (content: string): string => {
+    const id = `__PERCENT_LITERAL_${literals.length}__`;
+    literals.push(content);
+    return id;
+  };
+
+  while (i < n) {
+    const ch = code[i];
+
+    if (ch === '\n') {
+      out += ch;
+      prevSignificant = '';
+      i++;
+      continue;
+    }
+
+    if (ch === ' ' || ch === '\t') {
+      out += ch;
+      i++;
+      continue;
+    }
+
+    // Line comment: everything until end of line is left as-is (the
+    // line-based pass strips it later); but we must not scan inside it for
+    // literals.
+    if (ch === '#') {
+      const eol = code.indexOf('\n', i);
+      const end = eol === -1 ? n : eol;
+      out += code.substring(i, end);
+      i = end;
+      continue;
+    }
+
+    // String literals: copy verbatim (handle escapes).
+    if (ch === '"' || ch === "'" || ch === '`') {
+      const quote = ch;
+      let j = i + 1;
+      while (j < n) {
+        if (code[j] === '\\') {
+          j += 2;
+          continue;
+        }
+        if (code[j] === quote) {
+          j++;
+          break;
+        }
+        j++;
+      }
+      out += code.substring(i, j);
+      prevSignificant = quote;
+      i = j;
+      continue;
+    }
+
+    // Percent literals: %q{...}, %w[...], %r{...}, %(...), %!...!, etc.
+    // Only in value position (otherwise `%` is the modulo operator).
+    if (ch === '%') {
+      const prevIsValue = prevSignificant !== '' && isRubyValueChar(prevSignificant);
+      let p = i + 1;
+      // Optional type char.
+      if (p < n && /[qQrRwWiIsx]/.test(code[p])) {
+        p++;
+      }
+      const delim = p < n ? code[p] : '';
+      const delimIsValid = delim !== '' && /[^\w\s]/.test(delim);
+      if (!prevIsValue && delimIsValid) {
+        const close = RUBY_PAIRED_DELIMITERS[delim];
+        let j = p + 1;
+        let found = -1;
+        if (close) {
+          // Nesting-aware scan for paired brackets.
+          let depth = 1;
+          while (j < n) {
+            const c = code[j];
+            if (c === '\\') {
+              j += 2;
+              continue;
+            }
+            if (c === delim) {
+              depth++;
+            } else if (c === close) {
+              depth--;
+              if (depth === 0) {
+                found = j;
+                break;
+              }
+            }
+            j++;
+          }
+        } else {
+          // Non-paired delimiter: same char closes it.
+          while (j < n) {
+            const c = code[j];
+            if (c === '\\') {
+              j += 2;
+              continue;
+            }
+            if (c === delim) {
+              found = j;
+              break;
+            }
+            j++;
+          }
+        }
+        if (found !== -1) {
+          out += addPlaceholder(code.substring(i, found + 1));
+          prevSignificant = 'a'; // a literal is a value
+          i = found + 1;
+          continue;
+        }
+        // Unterminated: fall through, treat `%` literally.
+      }
+      out += ch;
+      prevSignificant = '%';
+      i++;
+      continue;
+    }
+
+    // Heredocs: <<~TAG / <<-TAG / <<TAG and quoted forms <<'TAG' / <<"TAG".
+    // Only a heredoc in value position; `a << b` (shift) is excluded because
+    // the previous significant char is a value, and `<< 2` (space/digit after)
+    // is the shift operator too.
+    if (ch === '<' && i + 1 < n && code[i + 1] === '<') {
+      const prevIsValue = prevSignificant !== '' && isRubyValueChar(prevSignificant);
+      const m = code
+        .substring(i)
+        .match(/^<<([~-]?)(?:(['"])([A-Za-z_]\w*)\2|([A-Za-z_]\w*))/);
+      if (!prevIsValue && m) {
+        const squiggly = m[1]; // '', '~', or '-'
+        const tag = m[3] !== undefined ? m[3] : m[4];
+        const allowIndent = squiggly === '~' || squiggly === '-';
+        // The heredoc opener stays on the current line; its body begins on the
+        // next line and ends at a line whose (optionally indented) trimmed
+        // content equals the tag.
+        const headerEnd = i + m[0].length;
+        const bodyStart = code.indexOf('\n', headerEnd);
+        if (bodyStart !== -1) {
+          // Find the terminator line.
+          let lineStart = bodyStart + 1;
+          let bodyEnd = -1;
+          while (lineStart <= n) {
+            let lineEnd = code.indexOf('\n', lineStart);
+            if (lineEnd === -1) lineEnd = n;
+            const lineText = code.substring(lineStart, lineEnd);
+            const matchesTag = allowIndent
+              ? lineText.trim() === tag
+              : lineText === tag;
+            if (matchesTag) {
+              bodyEnd = lineEnd;
+              break;
+            }
+            if (lineEnd === n) break;
+            lineStart = lineEnd + 1;
+          }
+          if (bodyEnd !== -1) {
+            // Emit the header (up to and including the newline) untouched so
+            // any inline comment after the opener is still processed, then
+            // protect the body (including the terminator tag line).
+            out += code.substring(i, bodyStart + 1);
+            out += addPlaceholder(code.substring(bodyStart + 1, bodyEnd));
+            prevSignificant = '';
+            i = bodyEnd;
+            continue;
+          }
+        }
+      }
+      // Not a heredoc: emit `<<` and continue (shift operator).
+      out += '<<';
+      prevSignificant = '<';
+      i += 2;
+      continue;
+    }
+
+    out += ch;
+    prevSignificant = ch;
+    i++;
+  }
+
+  return { text: out, literals };
+}
+
 /**
  * Removes comments from Ruby code
  * @param code - Input code
@@ -205,40 +451,12 @@ export function removeRubyComments(
 ): string {
   if (!code) return code;
   
-  // First, protect percent literals (e.g., %q{}, %w[], %r{}, etc.)
-  // This pattern matches % followed by an optional modifier (q,Q,r,R,w,W,x),
-  // a delimiter (any non-word, non-whitespace character),
-  // and everything up to the matching closing delimiter
-  // It properly handles nested delimiters and escaped characters
-  const percentLiteralPattern = /(^|\s)(%[qQrRwWx]?([^\w\s]))(?:[^\\]|\\.)*?\3/g;
-  const percentLiterals: {id: string, content: string}[] = [];
-  let percentLiteralIndex = 0;
-  
-  // First pass: protect percent literals
-  let withProtectedLiterals = code;
-  let match;
-  
-  // We need to use a while loop to handle all matches correctly
-  const regex = new RegExp(percentLiteralPattern);
-  let lastIndex = 0;
-  while ((match = regex.exec(code)) !== null) {
-    // Prevent infinite loops for zero-length matches
-    if (match.index === regex.lastIndex) {
-      regex.lastIndex++;
-    }
-    
-    const [fullMatch, prefix, , delimiter] = match;
-    const startPos = match.index + prefix.length;
-    const endPos = code.indexOf(delimiter, startPos + 1);
-    
-    if (endPos !== -1) {
-      const literalContent = code.substring(match.index, endPos + 1);
-      const id = `__PERCENT_LITERAL_${percentLiteralIndex++}__`;
-      percentLiterals.push({ id, content: literalContent });
-      withProtectedLiterals = withProtectedLiterals.replace(literalContent, id);
-    }
-  }
-  
+  // First, protect percent literals (e.g., %q{}, %w[], %r{}, etc.) and heredoc
+  // bodies so a `#` inside them is never treated as a comment. This is a
+  // single O(n) index-based pass (no repeated full-string replace).
+  const { text: withProtectedLiterals, literals: percentLiterals } =
+    protectRubyLiterals(code);
+
   // Process the code with percent literals protected
   let result = '';
   const lines = withProtectedLiterals.split('\n');
@@ -248,13 +466,11 @@ export function removeRubyComments(
   
   for (const line of lines) {
     const trimmed = line.trim();
-    
-    // Skip processing if this line is part of a protected literal
-    if (line.includes('__PERCENT_LITERAL_')) {
-      result += line + '\n';
-      continue;
-    }
-    
+
+    // Note: protected percent-literal / heredoc placeholders are plain word
+    // tokens (no `#`), so the normal comment scan below leaves them intact
+    // while still stripping any real comment that follows them on the line.
+
     // Multiline comments =begin ... =end
     if (trimmed.startsWith('=begin')) {
       inMultilineComment = true;
@@ -317,10 +533,10 @@ export function removeRubyComments(
     result += line + '\n';
   }
   
-  // Restore percent literals
+  // Restore percent literals and heredoc bodies
   result = result.replace(/__PERCENT_LITERAL_(\d+)__/g, (_, index) => {
     const literal = percentLiterals[parseInt(index)];
-    return literal ? literal.content : '';
+    return literal !== undefined ? literal : '';
   });
   
   return result.trimEnd();
@@ -471,40 +687,151 @@ export function removeHaskellComments(
 }
 
 /**
- * Finds the index of a # comment in a line (ignores # in strings)
+ * Returns true when `ch` can end a value/expression, meaning a following `/`
+ * is division rather than the start of a regex literal, and a following `?`
+ * is the ternary operator rather than a character literal.
+ */
+function isRubyValueChar(ch: string): boolean {
+  // Identifier chars (letters, digits, `_`) plus closing brackets terminate a
+  // value. (Unicode letters are treated as value chars as well.)
+  return /[\w)\]}]/.test(ch) || ch.charCodeAt(0) > 127;
+}
+
+/**
+ * Keywords after which a `/` begins a regex literal (e.g. `return /x/`).
+ */
+const RUBY_REGEX_KEYWORDS = new Set([
+  'when', 'and', 'or', 'not', 'if', 'unless', 'while', 'until',
+  'return', 'then', 'do', 'else', 'elsif', 'case', 'in', 'begin',
+]);
+
+/**
+ * Finds the index of a `#` comment in a line, ignoring `#` that appears inside
+ * Ruby string literals (`"..."`, `'...'`, `` `...` ``), regex literals
+ * (`/.../`) and character literals (`?#`, `?a`, `?\n`).
+ *
+ * Regex-vs-division is resolved with a "previous significant token" heuristic:
+ * a `/` starts a regex only when the previous non-space token is NOT a value
+ * (identifier/digit/`)`/`]`/`}`); otherwise the `/` is treated as division so
+ * that code such as `a / b # c` is never swallowed. When ambiguous we prefer
+ * division (conservative — never eat code).
  */
 function findCommentIndex(line: string): number {
-  let inString = false;
-  let stringChar = '';
   let escapeNext = false;
-  
+  // The previous significant (non-space) character, used to decide whether a
+  // `/` or `?` is in "value position". The empty string means start-of-line.
+  let prevSignificant = '';
+
   for (let i = 0; i < line.length; i++) {
     const char = line[i];
-    
+
     if (escapeNext) {
       escapeNext = false;
+      prevSignificant = char;
       continue;
     }
-    
+
+    if (char === ' ' || char === '\t') {
+      // Whitespace is not significant, but remember nothing changes about the
+      // previous significant token.
+      continue;
+    }
+
     if (char === '\\') {
       escapeNext = true;
+      prevSignificant = char;
       continue;
     }
-    
+
+    // String literals: "...", '...', `...`
     if (char === '"' || char === "'" || char === '`') {
-      if (!inString) {
-        inString = true;
-        stringChar = char;
-      } else if (char === stringChar) {
-        inString = false;
+      const stringChar = char;
+      i++;
+      while (i < line.length) {
+        const c = line[i];
+        if (c === '\\') {
+          i++; // skip escaped char
+        } else if (c === stringChar) {
+          break;
+        }
+        i++;
       }
+      prevSignificant = stringChar;
       continue;
     }
-    
-    if (char === '#' && !inString) {
+
+    // Character literals: ?# ?a ?\n etc. Only in value position (so the
+    // ternary `cond ? a : b` is unaffected — there `?` is followed by space).
+    if (char === '?') {
+      const next = i + 1 < line.length ? line[i + 1] : '';
+      const prevIsValue = prevSignificant !== '' && isRubyValueChar(prevSignificant);
+      if (!prevIsValue && next !== '' && next !== ' ' && next !== '\t') {
+        // Skip `?X` or `?\X` as a single-character literal.
+        if (next === '\\') {
+          i += 2; // skip `?` and the escape's char (consumed below)
+        } else {
+          i += 1; // skip the literal char
+        }
+        prevSignificant = 'a'; // a char literal is a value
+        continue;
+      }
+      // Otherwise it's the ternary operator.
+      prevSignificant = '?';
+      continue;
+    }
+
+    // Regex literals: /.../ — only when `/` is NOT in value position.
+    if (char === '/') {
+      const prevIsValue = prevSignificant !== '' && isRubyValueChar(prevSignificant);
+      // Check if the previous word token was a regex-introducing keyword.
+      let prevIsKeyword = false;
+      if (prevIsValue) {
+        const before = line.substring(0, i).trimEnd();
+        const m = before.match(/(?:^|[^\w])([a-z]+)$/);
+        if (m && RUBY_REGEX_KEYWORDS.has(m[1])) {
+          prevIsKeyword = true;
+        }
+      }
+      if (!prevIsValue || prevIsKeyword) {
+        // Consume a regex literal: handle \ escapes and [...] char classes
+        // (a `/` inside a class does not terminate the regex).
+        let j = i + 1;
+        let inClass = false;
+        let closed = false;
+        while (j < line.length) {
+          const c = line[j];
+          if (c === '\\') {
+            j += 2;
+            continue;
+          }
+          if (c === '[') {
+            inClass = true;
+          } else if (c === ']') {
+            inClass = false;
+          } else if (c === '/' && !inClass) {
+            closed = true;
+            break;
+          }
+          j++;
+        }
+        if (closed) {
+          i = j; // position on the closing `/`
+          prevSignificant = '/';
+          continue;
+        }
+        // Unterminated regex on this line: fall through and treat `/` as
+        // division to stay conservative.
+      }
+      prevSignificant = '/';
+      continue;
+    }
+
+    if (char === '#') {
       return i;
     }
+
+    prevSignificant = char;
   }
-  
+
   return -1;
 }
